@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>残薬終了日チェッカー</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 680px;
+      margin: 20px auto;
+      line-height: 1.6;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      margin-top: 22px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+
+    label {
+      display: block;
+      margin-top: 8px;
+    }
+
+    input[type="number"] {
+      width: 90px;
+      padding: 4px;
+    }
+
+    button {
+      margin-top: 18px;
+      padding: 8px 16px;
+      font-size: 16px;
+    }
+
+    #todayDisplay {
+      margin: 10px 0 18px;
+      padding: 10px;
+      background: #f3f3f3;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    #result {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      background: #f7f7f7;
+      white-space: pre-line;
+    }
+
+    .error {
+      color: #b00020;
+      background: #fff0f0 !important;
+    }
+
+    .ok {
+      color: #003c8f;
+      background: #eef5ff !important;
+    }
+
+    .dose-row {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .dose-label {
+      width: 70px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>残薬終了日チェッカー</h1>
+
+  <div id="todayDisplay"></div>
+
+  <label>残薬数（錠）：
+    <input type="number" id="stock" min="0" step="0.5">
+  </label>
+
+  <h2>1回あたりの服用量</h2>
+
+  <label class="dose-row">
+    <span class="dose-label">朝：</span>
+    <input type="number" id="doseMorning" min="0" step="0.5">
+  </label>
+
+  <label class="dose-row">
+    <span class="dose-label">昼：</span>
+    <input type="number" id="doseNoon" min="0" step="0.5">
+  </label>
+
+  <label class="dose-row">
+    <span class="dose-label">夜：</span>
+    <input type="number" id="doseEvening" min="0" step="0.5">
+  </label>
+
+  <label class="dose-row">
+    <span class="dose-label">寝る前：</span>
+    <input type="number" id="doseBedtime" min="0" step="0.5">
+  </label>
+
+  <h2>本日すでに飲んだタイミング</h2>
+
+  <label>
+    <input type="checkbox" id="doneMorning"> 今日の朝はもう飲んだ
+  </label>
+
+  <label>
+    <input type="checkbox" id="doneNoon"> 今日の昼はもう飲んだ
+  </label>
+
+  <label>
+    <input type="checkbox" id="doneEvening"> 今日の夜はもう飲んだ
+  </label>
+
+  <label>
+    <input type="checkbox" id="doneBedtime"> 今日の寝る前はもう飲んだ
+  </label>
+
+  <button onclick="calc()">薬がなくなるタイミングを計算</button>
+
+  <div id="result"></div>
+
+  <script>
+    const todayDisplay = document.getElementById('todayDisplay');
+    const resultEl = document.getElementById('result');
+
+    function dateToStr(d) {
+      const y = d.getFullYear();
+      const mm = d.getMonth() + 1;
+      const dd = d.getDate();
+      return `${y}年${mm}月${dd}日`;
+    }
+
+    function showToday() {
+      const today = new Date();
+      todayDisplay.textContent = `今日の日付：${dateToStr(today)}`;
+    }
+
+    showToday();
+
+    function showError(message) {
+      resultEl.className = 'error';
+      resultEl.textContent = message;
+    }
+
+    function showResult(message) {
+      resultEl.className = 'ok';
+      resultEl.textContent = message;
+    }
+
+    function getNumberAllowZero(id, label) {
+      const value = document.getElementById(id).value;
+
+      if (value === '') {
+        return {
+          ok: false,
+          message: `${label}が未入力です。`
+        };
+      }
+
+      const num = Number(value);
+
+      if (isNaN(num)) {
+        return {
+          ok: false,
+          message: `${label}には数値を入力してください。`
+        };
+      }
+
+      if (num < 0) {
+        return {
+          ok: false,
+          message: `${label}は0以上の数を入力してください。`
+        };
+      }
+
+      return {
+        ok: true,
+        value: num
+      };
+    }
+
+    function calc() {
+      resultEl.className = '';
+      resultEl.textContent = '';
+
+      const stockCheck = getNumberAllowZero('stock', '残薬数');
+      if (!stockCheck.ok) {
+        showError(stockCheck.message);
+        return;
+      }
+
+      const morningCheck = getNumberAllowZero('doseMorning', '朝の服用量');
+      if (!morningCheck.ok) {
+        showError(morningCheck.message);
+        return;
+      }
+
+      const noonCheck = getNumberAllowZero('doseNoon', '昼の服用量');
+      if (!noonCheck.ok) {
+        showError(noonCheck.message);
+        return;
+      }
+
+      const eveningCheck = getNumberAllowZero('doseEvening', '夜の服用量');
+      if (!eveningCheck.ok) {
+        showError(eveningCheck.message);
+        return;
+      }
+
+      const bedtimeCheck = getNumberAllowZero('doseBedtime', '寝る前の服用量');
+      if (!bedtimeCheck.ok) {
+        showError(bedtimeCheck.message);
+        return;
+      }
+
+      const dailyTotal =
+        morningCheck.value +
+        noonCheck.value +
+        eveningCheck.value +
+        bedtimeCheck.value;
+
+      if (dailyTotal <= 0) {
+        showError('1日の服用量が0です。朝・昼・夜・寝る前のいずれかに1以上の数を入力してください。');
+        return;
+      }
+
+      if (stockCheck.value <= 0) {
+        showError('残薬数が0錠のため、すでに薬はありません。');
+        return;
+      }
+
+      let remain = stockCheck.value;
+
+      const m = morningCheck.value;
+      const n = noonCheck.value;
+      const e = eveningCheck.value;
+      const b = bedtimeCheck.value;
+
+      const doneM = document.getElementById('doneMorning').checked;
+      const doneN = document.getElementById('doneNoon').checked;
+      const doneE = document.getElementById('doneEvening').checked;
+      const doneB = document.getElementById('doneBedtime').checked;
+
+      const today = new Date();
+
+      function processOneDay(date, isToday) {
+        const steps = [
+          { label: '朝', dose: m, done: isToday ? doneM : false },
+          { label: '昼', dose: n, done: isToday ? doneN : false },
+          { label: '夜', dose: e, done: isToday ? doneE : false },
+          { label: '寝る前', dose: b, done: isToday ? doneB : false }
+        ];
+
+        for (const step of steps) {
+          if (step.dose === 0) {
+            continue;
+          }
+
+          if (step.done) {
+            continue;
+          }
+
+          if (remain < step.dose) {
+            showResult(
+              `今日の日付：${dateToStr(today)}\n` +
+              `計算結果：${dateToStr(date)}の${step.label}の途中で薬が足りなくなります。\n` +
+              `その時点の残薬数：${remain}錠`
+            );
+            return true;
+          }
+
+          remain -= step.dose;
+
+          if (remain === 0) {
+            showResult(
+              `今日の日付：${dateToStr(today)}\n` +
+              `計算結果：${dateToStr(date)}の${step.label}の分を飲み終えたところで薬がなくなります。`
+            );
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      let current = new Date(today);
+
+      // 今日の残り分から計算
+      if (processOneDay(current, true)) {
+        return;
+      }
+
+      // 明日以降を計算
+      while (true) {
+        current.setDate(current.getDate() + 1);
+
+        if (processOneDay(current, false)) {
+          return;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
