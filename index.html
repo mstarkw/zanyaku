@@ -78,22 +78,18 @@
 
     #result {
       margin-top: 22px;
-      padding: 14px;
-      border-radius: 8px;
-      font-weight: bold;
-      background: #f7f7f7;
-      white-space: pre-line;
-      font-size: 18px;
     }
 
     .error {
       color: #b00020;
       background: #fff0f0 !important;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: bold;
     }
 
     .ok {
       color: #003c8f;
-      background: #eef5ff !important;
     }
 
     .section-box {
@@ -130,6 +126,43 @@
       white-space: nowrap;
     }
 
+    .result-card {
+      background: #eef5ff;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+      border-left: 6px solid #2d6cdf;
+    }
+
+    .result-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #003c8f;
+      margin-bottom: 4px;
+    }
+
+    .result-main {
+      font-size: 20px;
+      font-weight: bold;
+      color: #222;
+      line-height: 1.5;
+    }
+
+    .result-sub {
+      font-size: 16px;
+      color: #444;
+      margin-top: 4px;
+    }
+
+    .warning-card {
+      background: #fff7e6;
+      border-left-color: #f5a400;
+    }
+
+    .warning-card .result-title {
+      color: #9a6500;
+    }
+
     @media (max-width: 480px) {
       body {
         padding: 14px;
@@ -162,6 +195,10 @@
       .weekday-row {
         gap: 8px 14px;
       }
+
+      .result-main {
+        font-size: 19px;
+      }
     }
   </style>
 </head>
@@ -172,7 +209,7 @@
 
   <div class="section-box">
     <label>残薬数（錠）：
-      <input type="number" id="stock" min="0" step="0.5" inputmode="decimal">
+      <input type="number" id="stock" min="0" step="0.5" inputmode="decimal" enterkeyhint="next">
     </label>
   </div>
 
@@ -215,22 +252,22 @@
   <div class="section-box">
     <label class="dose-row">
       <span class="dose-label">朝：</span>
-      <input type="number" id="doseMorning" min="0" step="0.5" inputmode="decimal">
+      <input type="number" id="doseMorning" min="0" step="0.5" inputmode="decimal" enterkeyhint="next">
     </label>
 
     <label class="dose-row">
       <span class="dose-label">昼：</span>
-      <input type="number" id="doseNoon" min="0" step="0.5" inputmode="decimal">
+      <input type="number" id="doseNoon" min="0" step="0.5" inputmode="decimal" enterkeyhint="next">
     </label>
 
     <label class="dose-row">
       <span class="dose-label">夜：</span>
-      <input type="number" id="doseEvening" min="0" step="0.5" inputmode="decimal">
+      <input type="number" id="doseEvening" min="0" step="0.5" inputmode="decimal" enterkeyhint="next">
     </label>
 
     <label class="dose-row">
       <span class="dose-label">寝る前：</span>
-      <input type="number" id="doseBedtime" min="0" step="0.5" inputmode="decimal">
+      <input type="number" id="doseBedtime" min="0" step="0.5" inputmode="decimal" enterkeyhint="done">
     </label>
   </div>
 
@@ -254,7 +291,7 @@
     </label>
   </div>
 
-  <button onclick="calc()">薬がなくなるタイミングを計算</button>
+  <button id="calcButton" onclick="calc()">薬がなくなるタイミングを計算</button>
 
   <div id="result"></div>
 
@@ -282,7 +319,7 @@
 
     function showToday() {
       const today = new Date();
-      todayDisplay.textContent = `今日の日付：${dateToStr(today)}`;
+      todayDisplay.textContent = `今日：${dateToStr(today)}`;
     }
 
     showToday();
@@ -292,9 +329,19 @@
       resultEl.textContent = message;
     }
 
-    function showResult(message) {
+    function showResultCards(html) {
       resultEl.className = 'ok';
-      resultEl.textContent = message;
+      resultEl.innerHTML = html;
+    }
+
+    function makeCard(title, main, sub = '', extraClass = '') {
+      return `
+        <div class="result-card ${extraClass}">
+          <div class="result-title">${title}</div>
+          <div class="result-main">${main}</div>
+          ${sub ? `<div class="result-sub">${sub}</div>` : ''}
+        </div>
+      `;
     }
 
     function getNumberAllowZero(id, label) {
@@ -368,6 +415,36 @@
 
       return `${days}日後`;
     }
+
+    function setupInputFocusMove() {
+      const focusOrder = [
+        'stock',
+        'doseMorning',
+        'doseNoon',
+        'doseEvening',
+        'doseBedtime'
+      ];
+
+      focusOrder.forEach((id, index) => {
+        const input = document.getElementById(id);
+
+        input.addEventListener('keydown', function(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+
+            const nextId = focusOrder[index + 1];
+
+            if (nextId) {
+              document.getElementById(nextId).focus();
+            } else {
+              document.getElementById('calcButton').focus();
+            }
+          }
+        });
+      });
+    }
+
+    setupInputFocusMove();
 
     function calc() {
       resultEl.className = '';
@@ -533,12 +610,29 @@
             const prescriptionDaysAfter = getDaysAfter(today, prescriptionDate);
             const prescriptionDaysText = daysAfterText(prescriptionDaysAfter);
 
-            showResult(
-              `今日の日付：${dateToStr(today)}\n` +
-              `計算結果：${dateToStr(date)}の${step.label}の途中で薬が足りなくなります。\n` +
-              `　　　　　${dateToStr(prescriptionDate)}（${prescriptionDaysText}）の${step.label}の分から処方をお願いしてください。\n` +
-              `その時点の残薬数：${remain}錠`
-            );
+            const html =
+              makeCard(
+                '今日',
+                dateToStr(today)
+              ) +
+              makeCard(
+                '薬が足りなくなるタイミング',
+                `${dateToStr(date)}<br>${step.label}の途中で足りなくなります`,
+                '',
+                'warning-card'
+              ) +
+              makeCard(
+                '処方をお願いする目安',
+                `${dateToStr(prescriptionDate)}（${prescriptionDaysText}）<br>${step.label}の分から`
+              ) +
+              makeCard(
+                'その時点の残薬',
+                `${remain}錠`,
+                '',
+                'warning-card'
+              );
+
+            showResultCards(html);
             return true;
           }
 
@@ -549,11 +643,21 @@
             const prescriptionDaysAfter = getDaysAfter(today, nextDose.date);
             const prescriptionDaysText = daysAfterText(prescriptionDaysAfter);
 
-            showResult(
-              `今日の日付：${dateToStr(today)}\n` +
-              `計算結果：${dateToStr(date)}の${step.label}の分を飲み終えたところで薬がなくなります。\n` +
-              `　　　　　${dateToStr(nextDose.date)}（${prescriptionDaysText}）の${nextDose.label}の分から処方をお願いしてください。`
-            );
+            const html =
+              makeCard(
+                '今日',
+                dateToStr(today)
+              ) +
+              makeCard(
+                '薬がなくなるタイミング',
+                `${dateToStr(date)}<br>${step.label}の分を飲み終えたところ`
+              ) +
+              makeCard(
+                '処方をお願いする目安',
+                `${dateToStr(nextDose.date)}（${prescriptionDaysText}）<br>${nextDose.label}の分から`
+              );
+
+            showResultCards(html);
             return true;
           }
         }
