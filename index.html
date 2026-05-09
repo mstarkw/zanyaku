@@ -413,7 +413,7 @@
         return '明日';
       }
 
-      return `${days}日後`;
+      return `今日から ${days}日後`;
     }
 
     function setupInputFocusMove() {
@@ -623,7 +623,7 @@
               ) +
               makeCard(
                 '処方をお願いする目安',
-                `${dateToStr(prescriptionDate)}（${prescriptionDaysText}）<br>${step.label}の分から`
+                `${dateToStr(prescriptionDate)}<br>${step.label}の分から（${prescriptionDaysText}）`
               ) +
               makeCard(
                 'その時点の残薬',
@@ -654,7 +654,7 @@
               ) +
               makeCard(
                 '処方をお願いする目安',
-                `${dateToStr(nextDose.date)}（${prescriptionDaysText}）<br>${nextDose.label}の分から`
+                `${dateToStr(nextDose.date)}<br>${nextDose.label}の分から（${prescriptionDaysText}）`
               );
 
             showResultCards(html);
