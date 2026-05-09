@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>残薬終了日チェッカー</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px;
+      line-height: 1.7;
+      font-size: 18px;
+      background: #ffffff;
+      color: #222;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 28px;
+      line-height: 1.3;
+    }
+
+    h2 {
+      margin-top: 28px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 6px;
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+    }
+
+    input[type="number"] {
+      width: 140px;
+      padding: 12px;
+      font-size: 18px;
+      box-sizing: border-box;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.4);
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    button {
+      margin-top: 24px;
+      padding: 16px;
+      font-size: 20px;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      background: #2d6cdf;
+      color: white;
+      box-sizing: border-box;
+    }
+
+    button:active {
+      opacity: 0.85;
+    }
+
+    #todayDisplay {
+      margin: 12px 0 20px;
+      padding: 14px;
+      background: #f3f3f3;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    #result {
+      margin-top: 22px;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: bold;
+      background: #f7f7f7;
+      white-space: pre-line;
+      font-size: 18px;
+    }
+
+    .error {
+      color: #b00020;
+      background: #fff0f0 !important;
+    }
+
+    .ok {
+      color: #003c8f;
+      background: #eef5ff !important;
+    }
+
+    .section-box {
+      background: #fcfcfc;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .dose-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .dose-label {
+      width: 90px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .weekday-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      margin-top: 10px;
+    }
+
+    .weekday-label {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 8px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 14px;
+        font-size: 17px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      input[type="number"] {
+        width: 120px;
+        font-size: 18px;
+        padding: 12px;
+      }
+
+      .dose-label {
+        width: 90px;
+      }
+
+      button {
+        font-size: 19px;
+        padding: 15px;
+      }
+
+      .weekday-row {
+        gap: 8px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>残薬終了日チェッカー</h1>
+
+  <div id="todayDisplay"></div>
+
+  <div class="section-box">
+    <label>残薬数（錠）：
+      <input type="number" id="stock" min="0" step="0.5" inputmode="decimal">
+    </label>
+  </div>
+
+  <h2>服用する曜日</h2>
+
+  <div class="section-box">
+    <div class="weekday-row">
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdayMon" checked> 月
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdayTue" checked> 火
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdayWed" checked> 水
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdayThu" checked> 木
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdayFri" checked> 金
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdaySat" checked> 土
+      </label>
+
+      <label class="weekday-label">
+        <input type="checkbox" id="weekdaySun" checked> 日
+      </label>
+    </div>
+  </div>
+
+  <h2>1回あたりの服用量</h2>
+
+  <div class="section-box">
+    <label class="dose-row">
+      <span class="dose-label">朝：</span>
+      <input type="number" id="doseMorning" min="0" step="0.5" inputmode="decimal">
+    </label>
+
+    <label class="dose-row">
+      <span class="dose-label">昼：</span>
+      <input type="number" id="doseNoon" min="0" step="0.5" inputmode="decimal">
+    </label>
+
+    <label class="dose-row">
+      <span class="dose-label">夜：</span>
+      <input type="number" id="doseEvening" min="0" step="0.5" inputmode="decimal">
+    </label>
+
+    <label class="dose-row">
+      <span class="dose-label">寝る前：</span>
+      <input type="number" id="doseBedtime" min="0" step="0.5" inputmode="decimal">
+    </label>
+  </div>
+
+  <h2>本日すでに飲んだタイミング</h2>
+
+  <div class="section-box">
+    <label>
+      <input type="checkbox" id="doneMorning"> 今日の朝はもう飲んだ
+    </label>
+
+    <label>
+      <input type="checkbox" id="doneNoon"> 今日の昼はもう飲んだ
+    </label>
+
+    <label>
+      <input type="checkbox" id="doneEvening"> 今日の夜はもう飲んだ
+    </label>
+
+    <label>
+      <input type="checkbox" id="doneBedtime"> 今日の寝る前はもう飲んだ
+    </label>
+  </div>
+
+  <button onclick="calc()">薬がなくなるタイミングを計算</button>
+
+  <div id="result"></div>
+
+  <script>
+    const todayDisplay = document.getElementById('todayDisplay');
+    const resultEl = document.getElementById('result');
+
+    const weekdayNames = [
+      '日曜日',
+      '月曜日',
+      '火曜日',
+      '水曜日',
+      '木曜日',
+      '金曜日',
+      '土曜日'
+    ];
+
+    function dateToStr(d) {
+      const y = d.getFullYear();
+      const mm = d.getMonth() + 1;
+      const dd = d.getDate();
+      const weekday = weekdayNames[d.getDay()];
+      return `${y}年${mm}月${dd}日（${weekday}）`;
+    }
+
+    function showToday() {
+      const today = new Date();
+      todayDisplay.textContent = `今日の日付：${dateToStr(today)}`;
+    }
+
+    showToday();
+
+    function showError(message) {
+      resultEl.className = 'error';
+      resultEl.textContent = message;
+    }
+
+    function showResult(message) {
+      resultEl.className = 'ok';
+      resultEl.textContent = message;
+    }
+
+    function getNumberAllowZero(id, label) {
+      const value = document.getElementById(id).value;
+
+      if (value === '') {
+        return {
+          ok: false,
+          message: `${label}が未入力です。`
+        };
+      }
+
+      const num = Number(value);
+
+      if (isNaN(num)) {
+        return {
+          ok: false,
+          message: `${label}には数値を入力してください。`
+        };
+      }
+
+      if (num < 0) {
+        return {
+          ok: false,
+          message: `${label}は0以上の数を入力してください。`
+        };
+      }
+
+      return {
+        ok: true,
+        value: num
+      };
+    }
+
+    function getSelectedWeekdays() {
+      return {
+        0: document.getElementById('weekdaySun').checked,
+        1: document.getElementById('weekdayMon').checked,
+        2: document.getElementById('weekdayTue').checked,
+        3: document.getElementById('weekdayWed').checked,
+        4: document.getElementById('weekdayThu').checked,
+        5: document.getElementById('weekdayFri').checked,
+        6: document.getElementById('weekdaySat').checked
+      };
+    }
+
+    function hasAnySelectedWeekday(selectedWeekdays) {
+      for (let i = 0; i <= 6; i++) {
+        if (selectedWeekdays[i]) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function getDaysAfter(today, targetDate) {
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const end = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      const diffMs = end - start;
+      return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    function daysAfterText(days) {
+      if (days === 0) {
+        return '今日';
+      }
+
+      if (days === 1) {
+        return '明日';
+      }
+
+      return `${days}日後`;
+    }
+
+    function calc() {
+      resultEl.className = '';
+      resultEl.textContent = '';
+
+      const stockCheck = getNumberAllowZero('stock', '残薬数');
+      if (!stockCheck.ok) {
+        showError(stockCheck.message);
+        return;
+      }
+
+      const morningCheck = getNumberAllowZero('doseMorning', '朝の服用量');
+      if (!morningCheck.ok) {
+        showError(morningCheck.message);
+        return;
+      }
+
+      const noonCheck = getNumberAllowZero('doseNoon', '昼の服用量');
+      if (!noonCheck.ok) {
+        showError(noonCheck.message);
+        return;
+      }
+
+      const eveningCheck = getNumberAllowZero('doseEvening', '夜の服用量');
+      if (!eveningCheck.ok) {
+        showError(eveningCheck.message);
+        return;
+      }
+
+      const bedtimeCheck = getNumberAllowZero('doseBedtime', '寝る前の服用量');
+      if (!bedtimeCheck.ok) {
+        showError(bedtimeCheck.message);
+        return;
+      }
+
+      const selectedWeekdays = getSelectedWeekdays();
+
+      if (!hasAnySelectedWeekday(selectedWeekdays)) {
+        showError('服用する曜日が選択されていません。月〜日のいずれかにチェックを入れてください。');
+        return;
+      }
+
+      const dailyTotal =
+        morningCheck.value +
+        noonCheck.value +
+        eveningCheck.value +
+        bedtimeCheck.value;
+
+      if (dailyTotal <= 0) {
+        showError('1日の服用量が0です。朝・昼・夜・寝る前のいずれかに1以上の数を入力してください。');
+        return;
+      }
+
+      if (stockCheck.value <= 0) {
+        showError('残薬数が0錠のため、すでに薬はありません。');
+        return;
+      }
+
+      let remain = stockCheck.value;
+
+      const m = morningCheck.value;
+      const n = noonCheck.value;
+      const e = eveningCheck.value;
+      const b = bedtimeCheck.value;
+
+      const doneM = document.getElementById('doneMorning').checked;
+      const doneN = document.getElementById('doneNoon').checked;
+      const doneE = document.getElementById('doneEvening').checked;
+      const doneB = document.getElementById('doneBedtime').checked;
+
+      const today = new Date();
+
+      const baseSteps = [
+        { label: '朝', dose: m },
+        { label: '昼', dose: n },
+        { label: '夜', dose: e },
+        { label: '寝る前', dose: b }
+      ];
+
+      function isDoseDay(date) {
+        return selectedWeekdays[date.getDay()];
+      }
+
+      function hasRemainingDoseOnThisDay(isToday) {
+        const todayDone = [doneM, doneN, doneE, doneB];
+
+        for (let i = 0; i < baseSteps.length; i++) {
+          if (baseSteps[i].dose <= 0) {
+            continue;
+          }
+
+          if (isToday && todayDone[i]) {
+            continue;
+          }
+
+          return true;
+        }
+
+        return false;
+      }
+
+      function findNextDoseTiming(date, currentStepIndex) {
+        const nextDate = new Date(date);
+
+        if (isDoseDay(nextDate)) {
+          for (let i = currentStepIndex + 1; i < baseSteps.length; i++) {
+            if (baseSteps[i].dose > 0) {
+              return {
+                date: nextDate,
+                label: baseSteps[i].label
+              };
+            }
+          }
+        }
+
+        while (true) {
+          nextDate.setDate(nextDate.getDate() + 1);
+
+          if (!isDoseDay(nextDate)) {
+            continue;
+          }
+
+          for (let i = 0; i < baseSteps.length; i++) {
+            if (baseSteps[i].dose > 0) {
+              return {
+                date: nextDate,
+                label: baseSteps[i].label
+              };
+            }
+          }
+        }
+      }
+
+      function processOneDay(date, isToday) {
+        if (!isDoseDay(date)) {
+          return false;
+        }
+
+        if (!hasRemainingDoseOnThisDay(isToday)) {
+          return false;
+        }
+
+        const steps = [
+          { label: '朝', dose: m, done: isToday ? doneM : false },
+          { label: '昼', dose: n, done: isToday ? doneN : false },
+          { label: '夜', dose: e, done: isToday ? doneE : false },
+          { label: '寝る前', dose: b, done: isToday ? doneB : false }
+        ];
+
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+
+          if (step.dose === 0) {
+            continue;
+          }
+
+          if (step.done) {
+            continue;
+          }
+
+          if (remain < step.dose) {
+            const prescriptionDate = new Date(date);
+            const prescriptionDaysAfter = getDaysAfter(today, prescriptionDate);
+            const prescriptionDaysText = daysAfterText(prescriptionDaysAfter);
+
+            showResult(
+              `今日の日付：${dateToStr(today)}\n` +
+              `計算結果：${dateToStr(date)}の${step.label}の途中で薬が足りなくなります。\n` +
+              `　　　　　${dateToStr(prescriptionDate)}（${prescriptionDaysText}）の${step.label}の分から処方をお願いしてください。\n` +
+              `その時点の残薬数：${remain}錠`
+            );
+            return true;
+          }
+
+          remain -= step.dose;
+
+          if (remain === 0) {
+            const nextDose = findNextDoseTiming(date, i);
+            const prescriptionDaysAfter = getDaysAfter(today, nextDose.date);
+            const prescriptionDaysText = daysAfterText(prescriptionDaysAfter);
+
+            showResult(
+              `今日の日付：${dateToStr(today)}\n` +
+              `計算結果：${dateToStr(date)}の${step.label}の分を飲み終えたところで薬がなくなります。\n` +
+              `　　　　　${dateToStr(nextDose.date)}（${prescriptionDaysText}）の${nextDose.label}の分から処方をお願いしてください。`
+            );
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      let current = new Date(today);
+
+      if (processOneDay(current, true)) {
+        return;
+      }
+
+      while (true) {
+        current.setDate(current.getDate() + 1);
+
+        if (processOneDay(current, false)) {
+          return;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
