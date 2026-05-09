@@ -138,20 +138,15 @@
       font-size: 16px;
       font-weight: bold;
       color: #003c8f;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .result-main {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       color: #222;
-      line-height: 1.5;
-    }
-
-    .result-sub {
-      font-size: 16px;
-      color: #444;
-      margin-top: 4px;
+      line-height: 1.7;
+      white-space: pre-line;
     }
 
     .warning-card {
@@ -161,6 +156,15 @@
 
     .warning-card .result-title {
       color: #9a6500;
+    }
+
+    .final-card {
+      background: #eaf8ee;
+      border-left-color: #1f8f3a;
+    }
+
+    .final-card .result-title {
+      color: #146b2a;
     }
 
     @media (max-width: 480px) {
@@ -197,7 +201,7 @@
       }
 
       .result-main {
-        font-size: 19px;
+        font-size: 17px;
       }
     }
   </style>
@@ -309,6 +313,16 @@
       '土曜日'
     ];
 
+    const weekdayShortNames = {
+      0: '日',
+      1: '月',
+      2: '火',
+      3: '水',
+      4: '木',
+      5: '金',
+      6: '土'
+    };
+
     function dateToStr(d) {
       const y = d.getFullYear();
       const mm = d.getMonth() + 1;
@@ -334,12 +348,11 @@
       resultEl.innerHTML = html;
     }
 
-    function makeCard(title, main, sub = '', extraClass = '') {
+    function makeCard(title, main, extraClass = '') {
       return `
         <div class="result-card ${extraClass}">
-          <div class="result-title">${title}</div>
+          <div class="result-title">【${title}】</div>
           <div class="result-main">${main}</div>
-          ${sub ? `<div class="result-sub">${sub}</div>` : ''}
         </div>
       `;
     }
@@ -397,6 +410,32 @@
       return false;
     }
 
+    function isEveryday(selectedWeekdays) {
+      for (let i = 0; i <= 6; i++) {
+        if (!selectedWeekdays[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function selectedWeekdaysText(selectedWeekdays) {
+      if (isEveryday(selectedWeekdays)) {
+        return '毎日';
+      }
+
+      const order = [1, 2, 3, 4, 5, 6, 0];
+      const selected = [];
+
+      for (const day of order) {
+        if (selectedWeekdays[day]) {
+          selected.push(weekdayShortNames[day]);
+        }
+      }
+
+      return selected.join('・');
+    }
+
     function getDaysAfter(today, targetDate) {
       const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const end = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
@@ -413,7 +452,27 @@
         return '明日';
       }
 
-      return `今日から ${days}日後`;
+      return `今日から${days}日後`;
+    }
+
+    function doneStatusText(doneM, doneN, doneE, doneB) {
+      if (doneB) {
+        return '寝る前まで飲んだ';
+      }
+
+      if (doneE) {
+        return '夜まで飲んだ';
+      }
+
+      if (doneN) {
+        return '昼まで飲んだ';
+      }
+
+      if (doneM) {
+        return '朝まで飲んだ';
+      }
+
+      return 'まだ今日分は飲んでいない';
     }
 
     function setupInputFocusMove() {
@@ -517,6 +576,17 @@
 
       const today = new Date();
 
+      const inputConfirmText =
+        `残薬数：${stockCheck.value}錠\n` +
+        `服用曜日：${selectedWeekdaysText(selectedWeekdays)}\n\n` +
+        `服用量：\n` +
+        `朝：${m}錠\n` +
+        `昼：${n}錠\n` +
+        `夜：${e}錠\n` +
+        `寝る前：${b}錠\n\n` +
+        `本日の服用状況：\n` +
+        `${doneStatusText(doneM, doneN, doneE, doneB)}`;
+
       const baseSteps = [
         { label: '朝', dose: m },
         { label: '昼', dose: n },
@@ -578,6 +648,18 @@
         }
       }
 
+      function makeNonDailyWarning() {
+        if (isEveryday(selectedWeekdays)) {
+          return '';
+        }
+
+        return makeCard(
+          '注意',
+          `毎日服用ではありません。\n服用曜日：${selectedWeekdaysText(selectedWeekdays)}\nとして計算しています。`,
+          'warning-card'
+        );
+      }
+
       function processOneDay(date, isToday) {
         if (!isDoseDay(date)) {
           return false;
@@ -609,27 +691,33 @@
             const prescriptionDate = new Date(date);
             const prescriptionDaysAfter = getDaysAfter(today, prescriptionDate);
             const prescriptionDaysText = daysAfterText(prescriptionDaysAfter);
+            const shortage = step.dose - remain;
 
             const html =
               makeCard(
-                '今日',
-                dateToStr(today)
+                '入力内容の確認',
+                inputConfirmText
+              ) +
+              makeNonDailyWarning() +
+              makeCard(
+                '注意',
+                '最後の服用で薬が不足します。',
+                'warning-card'
               ) +
               makeCard(
-                '薬が足りなくなるタイミング',
-                `${dateToStr(date)}<br>${step.label}の途中で足りなくなります`,
-                '',
+                '薬が足りなくなる日',
+                `${dateToStr(date)}\n${step.label}の途中で足りなくなります`,
+                'warning-card'
+              ) +
+              makeCard(
+                'その時点の残薬',
+                `残薬：${remain}錠\n必要量：${step.dose}錠\n不足量：${shortage}錠`,
                 'warning-card'
               ) +
               makeCard(
                 '処方をお願いする目安',
-                `${dateToStr(prescriptionDate)}<br>${step.label}の分から（${prescriptionDaysText}）`
-              ) +
-              makeCard(
-                'その時点の残薬',
-                `${remain}錠`,
-                '',
-                'warning-card'
+                `${dateToStr(prescriptionDate)}\n${step.label}の分から（${prescriptionDaysText}）`,
+                'final-card'
               );
 
             showResultCards(html);
@@ -645,16 +733,18 @@
 
             const html =
               makeCard(
-                '今日',
-                dateToStr(today)
+                '入力内容の確認',
+                inputConfirmText
               ) +
+              makeNonDailyWarning() +
               makeCard(
-                '薬がなくなるタイミング',
-                `${dateToStr(date)}<br>${step.label}の分を飲み終えたところ`
+                '薬がなくなる日',
+                `${dateToStr(date)}\n${step.label}の分を飲み終えたところ`
               ) +
               makeCard(
                 '処方をお願いする目安',
-                `${dateToStr(nextDose.date)}<br>${nextDose.label}の分から（${prescriptionDaysText}）`
+                `${dateToStr(nextDose.date)}\n${nextDose.label}の分から（${prescriptionDaysText}）`,
+                'final-card'
               );
 
             showResultCards(html);
